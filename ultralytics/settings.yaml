@@ -1,0 +1,17 @@
+settings_version: 0.0.4
+datasets_dir: ../segmentation_scripts/datasets
+weights_dir: ../segmentation_scripts/weights
+runs_dir: ../segmentation_scripts/runs
+uuid: 527c296442d43f4ac832c4cae6fd9c6fadd687037df28d95a7bc91309df566b7
+sync: true
+api_key: ''
+openai_api_key: ''
+clearml: true
+comet: true
+dvc: true
+hub: true
+mlflow: true
+neptune: true
+raytune: true
+tensorboard: true
+wandb: true
