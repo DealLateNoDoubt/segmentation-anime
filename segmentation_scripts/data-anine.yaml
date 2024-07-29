@@ -1,0 +1,9 @@
+
+path: ../datasets/anime-seg # dataset root dir
+train: images/train # train images (relative to 'path') 4 images
+val: images/val # val images (relative to 'path') 4 images
+test: # create_self_data images (optional)
+
+# Classes
+names:
+  0: anine-person
