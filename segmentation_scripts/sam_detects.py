@@ -1,0 +1,115 @@
+import sys
+sys.path.append('..')  # 添加上级父目录到搜索路径
+
+import cv2
+import argparse
+import numpy as np
+from onnx_detects import YoloSegPredict
+from sam.segment_anything import SamAutomaticMaskGenerator, sam_model_registry
+
+
+def show_image(image):
+    cv2.imshow("test", image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def predict(parse):
+    source = parse.source
+
+    # 加载onnx
+    onnx = YoloSegPredict("runs/m-starnet-glsa-bifpn-ep100-1/weights/best.onnx")
+
+    # 加载sam
+    # 加载sam
+    sam = sam_model_registry["vit_h"](checkpoint="../sam/checkpoints/sam_vit_h_4b8939.pth")
+    sam = sam.cuda()
+    mask_generator = SamAutomaticMaskGenerator(
+        sam,
+        crop_n_layers=1,
+    )
+
+    detects(source, onnx, mask_generator)
+
+def detects(source, onnx, sam, threshold=0.7):
+    image = cv2.imread(source)
+
+    kernel = np.zeros((3, 3), np.uint8)
+    iterations = 3
+
+    _, _, onnx_masks = onnx(image)
+    onnx_masks = onnx_masks[0]
+    onnx_masks = np.where(onnx_masks > 1, 255, 0).astype(np.uint8)
+    onnx_masks = cv2.erode(onnx_masks, kernel, iterations=iterations)   # 腐蚀
+    onnx_masks = cv2.dilate(onnx_masks, kernel, iterations=iterations-1)    # 膨胀
+    onnx_masks = onnx_masks.astype(np.uint8)
+    if len(onnx_masks) <= 0:
+        print("no-onnx")
+        return
+    print("onnx-done")
+
+    sam_masks = []
+    anns = sam.generate(image)
+    img = np.ones((anns[0]['segmentation'].shape[0], anns[0]['segmentation'].shape[1], 4))
+    img[:, :, 3] = 0
+    for i, ann in enumerate(anns):
+        m = ann['segmentation'].astype(np.uint8)
+        sam_masks.append(m)
+        # temp_img = np.ones((anns[0]['segmentation'].shape[0], anns[0]['segmentation'].shape[1], 4))
+        # temp_img[m] = [255, 255, 255, 255]
+        # img[m] = [255, 255, 255, 255]
+        # cv2.imwrite(f"./test/{i}.jpg", temp_img)
+    # cv2.imwrite(f"./test/test.jpg", img)
+
+    sam_masks = np.array(sam_masks)
+    if len(sam_masks) <= 0:
+        print("no-sam")
+        return
+    print("sam-done")
+
+    zeros = np.zeros_like(sam_masks[0])
+    full_mask = np.zeros_like(sam_masks[0])
+    for i, mask in enumerate(sam_masks):
+        full_mask = cv2.bitwise_or(full_mask, mask)
+
+    not_labeled = cv2.bitwise_not(cv2.bitwise_or(zeros, full_mask))
+
+    final_mask = np.zeros_like(sam_masks[0])
+    for i, mask in enumerate(sam_masks):
+        score = np.sum(onnx_masks * mask / mask.sum())
+        if (score / 255.0) > threshold:
+            final_mask = cv2.bitwise_or(final_mask, mask)  # 或运算
+
+    not_labeled_onnx = cv2.bitwise_and(not_labeled, onnx_masks)
+    final_mask = cv2.bitwise_or(final_mask, not_labeled_onnx)
+    final_mask = cv2.erode(final_mask, kernel, iterations=iterations)
+    final_mask = cv2.dilate(final_mask, kernel, iterations=iterations)
+    final_mask = np.array(final_mask)
+
+    image_add_mask = source_add_mask(source, final_mask)
+    cv2.imwrite("./test/image_add_mask.png", image_add_mask)
+
+def source_add_mask(source, mask):
+    original_image = cv2.imread(source)
+
+    # 确保原图是三通道的
+    if original_image.shape[2] == 4:  # 如果原图是四通道（例如带有alpha通道）
+        original_image = cv2.cvtColor(original_image, cv2.COLOR_BGRA2BGR)
+
+    # 创建一个与原图大小相同的浅色图像
+    color_mask = np.zeros_like(original_image)
+    color_mask[mask > 0] = [128, 0, 128]  # 浅色
+
+    return cv2.addWeighted(original_image, 0.7, color_mask, 1, 0, dtype=cv2.CV_32F)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", default="./test/images/5.jpg")
+    parser.add_argument("--save_path", default="./test/save")
+    parser.add_argument("--show_mask", default=True)
+    parser.add_argument("--show_sam", default=True)
+    parser.add_argument("--show_yolo", default=True)
+    parser.add_argument("--show_seg", default=True)
+
+    predict(parser.parse_args())

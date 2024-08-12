@@ -94,7 +94,7 @@ def predict(parse):
     source = parse.source
 
     # 加载sam
-    sam = sam_model_registry["vit_h"](checkpoint="../sam/weight/sam_vit_h_4b8939.pth")
+    sam = sam_model_registry["vit_h"](checkpoint="../sam/checkpoints/sam_vit_h_4b8939.pth")
     sam = sam.cuda()
     sam_model_generator = SamAutomaticMaskGenerator(
         sam,
@@ -165,6 +165,25 @@ def show_img(img):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def test_sam_to_seg():
+    image = Image.open('./test/images/3.jpg')
+    image = np.array(image.convert("RGB"))
+    sam = sam_model_registry["vit_h"](checkpoint="../sam/checkpoints/sam_vit_h_4b8939.pth")
+    sam = sam.cuda()
+    sam_model_generator = SamAutomaticMaskGenerator(
+        sam,
+        crop_n_layers=1,
+    )
+    anns = sam_model_generator.generate(image)
+    img = np.ones((anns[0]['segmentation'].shape[0], anns[0]['segmentation'].shape[1], 4))
+    img[:, :, 3] = 0
+    for i, ann in enumerate(anns):
+        m = ann['segmentation']
+        temp_img = np.ones((anns[0]['segmentation'].shape[0], anns[0]['segmentation'].shape[1], 4))
+        temp_img[m] = [255, 255, 255, 255]
+        img[m] = [255, 255, 255, 255]
+        cv2.imwrite(f"./test/{i}.jpg", temp_img)
+    cv2.imwrite(f"./test/test.jpg", img)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
