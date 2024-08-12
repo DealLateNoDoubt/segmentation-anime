@@ -1,7 +1,7 @@
 # segmentation-anime
 
 ![5_add_mask](https://github.com/user-attachments/assets/4b363d9b-0cc9-4ecb-9fd7-e46b133efc24)
-基于轻量化改进Yolov8-seg + Sam 实现动漫人物分割
+基于轻量化改进Yolov8-seg + Sam|Sam2 实现动漫人物分割
 
 ## Yolov8-Seg
 ### Yolov8轻量化改进-ultralytics/cfg/v8/yolov8-seg-improve.yaml
@@ -13,6 +13,8 @@
    
 改进后，参数从43w有效减少至20w,OPs也有所提升；
 YOLOv8l-seg-improve summary: 830 layers, 20007752 parameters, 20007736 gradients, 125.9 GFLOPs
+
+# 训练后的模型导出为onnx结构，借助onnxruntime来实现PC端部署，从而加速推理；
 
 ## Sam
 ### 使用官方[SAM](https://github.com/facebookresearch/segment-anything)代码，以及vit-h权重对图片进行处理；
