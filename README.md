@@ -14,7 +14,7 @@
 改进后，参数从43w有效减少至20w,OPs也有所提升；
 YOLOv8l-seg-improve summary: 830 layers, 20007752 parameters, 20007736 gradients, 125.9 GFLOPs
 
-# 训练后的模型导出为onnx结构，借助onnxruntime来实现PC端部署，从而加速推理；
+### 训练后的模型导出为onnx结构，借助onnxruntime来实现PC端部署，从而加速推理；
 
 ## Sam
 ### 使用官方[SAM](https://github.com/facebookresearch/segment-anything)代码，以及vit-h权重对图片进行处理；
